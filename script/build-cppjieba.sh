@@ -1,4 +1,3 @@
-
 DIR="build"
 if [ ! -d "$DIR" ]; then
     ###  Create if $DIR does NOT exists ###
