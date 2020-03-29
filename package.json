@@ -1,0 +1,32 @@
+{
+  "name": "wasm-cppjieba",
+  "version": "0.1.0",
+  "description": "Build cppjieba to webassembly and work on browser ✂️",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YingshanDeng/wasm-cppjieba.git"
+  },
+  "keywords": [
+    "webassembly",
+    "cppjieba"
+  ],
+  "author": "YingshanDeng",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/YingshanDeng/wasm-cppjieba/issues"
+  },
+  "homepage": "https://github.com/YingshanDeng/wasm-cppjieba#readme",
+  "devDependencies": {
+    "commitizen": "^4.0.3",
+    "cz-conventional-changelog": "^3.1.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
