@@ -10,6 +10,7 @@ Build cppjieba to webassembly and work on browser ✂️
 ```shell
 git clone --recurse-submodules git@github.com:YingshanDeng/wasm-cppjieba.git
 
+npm run build-cppjieba
 ```
 
 ## Demo

@@ -1,80 +1,167 @@
+#include <emscripten.h>
 #include "cppjieba/Jieba.hpp"
 
 using namespace std;
 
-const char* const DICT_PATH = "../cppjieba/dict/jieba.dict.utf8";
-const char* const HMM_PATH = "../cppjieba/dict/hmm_model.utf8";
-const char* const USER_DICT_PATH = "../cppjieba/dict/user.dict.utf8";
-const char* const IDF_PATH = "../cppjieba/dict/idf.utf8";
-const char* const STOP_WORD_PATH = "../cppjieba/dict/stop_words.utf8";
+const char* const DICT_PATH = "offline/jieba.dict.utf8";
+const char* const HMM_PATH = "offline/hmm_model.utf8";
+const char* const USER_DICT_PATH = "offline/user.dict.utf8";
+const char* const IDF_PATH = "offline/idf.utf8";
+const char* const STOP_WORD_PATH = "offline/stop_words.utf8";
 
-int main(int argc, char** argv) {
-  cppjieba::Jieba jieba(DICT_PATH,
-        HMM_PATH,
-        USER_DICT_PATH,
-        IDF_PATH,
-        STOP_WORD_PATH);
-  vector<string> words;
-  vector<cppjieba::Word> jiebawords;
-  string s;
-  string result;
+extern "C" {
+    cppjieba::Jieba* jieba;
 
-  s = "他来到了网易杭研大厦";
-  cout << s << endl;
-  cout << "[demo] Cut With HMM" << endl;
-  jieba.Cut(s, words, true);
-  cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+    void initJiebaInstance() {
+        jieba = new cppjieba::Jieba(
+            DICT_PATH,
+            HMM_PATH,
+            USER_DICT_PATH,
+            IDF_PATH,
+            STOP_WORD_PATH
+        );
+    }
 
-  cout << "[demo] Cut Without HMM " << endl;
-  jieba.Cut(s, words, false);
-  cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+    void test() {
+        vector<string> words;
+        // vector<cppjieba::Word> jiebawords;
+        string s;
+        // string result;
+        s = "他来到了网易杭研大厦";
+        cout << s << endl;
+        cout << "[demo] Cut With HMM" << endl;
+        jieba->Cut(s, words, true);
+        cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+    }
+}
 
-  s = "我来到北京清华大学";
-  cout << s << endl;
-  cout << "[demo] CutAll" << endl;
-  jieba.CutAll(s, words);
-  cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+// 挂载 DB
+EM_JS(void, mountDB, (const char* db), {
+    var DB_NAME = UTF8ToString(db);
+    FS.mkdir(DB_NAME);
+    FS.mount(IDBFS, {}, DB_NAME);
+});
 
-  s = "小明硕士毕业于中国科学院计算所，后在日本京都大学深造";
-  cout << s << endl;
-  cout << "[demo] CutForSearch" << endl;
-  jieba.CutForSearch(s, words);
-  cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+int main() {
 
-  cout << "[demo] Insert User Word" << endl;
-  jieba.Cut("男默女泪", words);
-  cout << limonp::Join(words.begin(), words.end(), "/") << endl;
-  jieba.InsertUserWord("男默女泪");
-  jieba.Cut("男默女泪", words);
-  cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+    mountDB("/offline");
 
-  cout << "[demo] CutForSearch Word With Offset" << endl;
-  jieba.CutForSearch(s, jiebawords, true);
-  cout << jiebawords << endl;
+    EM_ASM(
+        function xhrLoadDict(baseURL, dict) {
+            var url = baseURL + dict;
+            return new Promise(function(resolve, reject) {
+                var request = new XMLHttpRequest;
+                request.open("GET", url, true);
+                request.responseType = "arraybuffer";
+                request.url = url;
+                request.onreadystatechange = function() {
+                    if (request.readyState == 4) {
+                        if (request.status == 200) {
+                            resolve(request.response);
+                        } else {
+                            reject('XHR LOAD FAIL: ' + request.status + ' : ' + request.url);
+                        }
+                    }
+                };
+                request.send();
+            });
+        }
 
-  cout << "[demo] Lookup Tag for Single Token" << endl;
-  const int DemoTokenMaxLen = 32;
-  char DemoTokens[][DemoTokenMaxLen] = {"拖拉机", "CEO", "123", "。"};
-  vector<pair<string, string> > LookupTagres(sizeof(DemoTokens) / DemoTokenMaxLen);
-  vector<pair<string, string> >::iterator it;
-  for (it = LookupTagres.begin(); it != LookupTagres.end(); it++) {
-  it->first = DemoTokens[it - LookupTagres.begin()];
-  it->second = jieba.LookupTag(it->first);
-  }
-  cout << LookupTagres << endl;
+        function writeDictToDB(arraybuf, dictPath) {
+            return new Promise(function(resolve, reject) {
+                var len = arraybuf.byteLength;
+                var dataView = new DataView(arraybuf);
+                var data = new Uint8Array(len);
+                for (var i = 0; i < len; i++) {
+                    data[i] = dataView.getUint8(i);
+                }
+                var stream= FS.open(dictPath, 'w+');
+                FS.write(stream, data, 0, data.length, 0);
+                FS.close(stream);
 
-  cout << "[demo] Tagging" << endl;
-  vector<pair<string, string> > tagres;
-  s = "我是拖拉机学院手扶拖拉机专业的。不用多久，我就会升职加薪，当上CEO，走上人生巅峰。";
-  jieba.Tag(s, tagres);
-  cout << s << endl;
-  cout << tagres << endl;
+                FS.syncfs(false, function (err) {
+                    if (err) {
+                        reject('WRITE TO DB FAIL: ' + dictPath);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+        }
 
-  cout << "[demo] Keyword Extraction" << endl;
-  const size_t topk = 5;
-  vector<cppjieba::KeywordExtractor::Word> keywordres;
-  jieba.extractor.Extract(s, keywordres, topk);
-  cout << s << endl;
-  cout << keywordres << endl;
-  return EXIT_SUCCESS;
+        function loadDictAndWriteToDB(baseURL, dict, dbName) {
+            return xhrLoadDict(baseURL, dict).then(
+                function(arraybuf) {
+                    return writeDictToDB(arraybuf, dbName + '/' + dict);
+                },
+                function(err) {
+                    return Promise.reject(err);
+                }
+            );
+        }
+
+        function sequencePromise(tasks) {
+            return tasks.reduce(function(promise, task) {
+                return promise.then(task);
+            }, Promise.resolve());
+        }
+
+        function loadJiebaDicts(dicts, baseURL, dbName) {
+            var promises = dicts.map(function(dict) {
+                return loadDictAndWriteToDB.bind(null, baseURL, dict, dbName);
+            });
+            return sequencePromise(promises);
+        }
+
+        // 检查jieba所需词典是否已经在DB中
+        function checkJiebaDictsReady(dicts, dbName) {
+            return new Promise(function(resolve, reject) {
+                FS.syncfs(true, function (err) {
+                    if (err) {
+                        reject();
+                    }
+                    dicts.forEach(function(dict) {
+                        var dictPath = dbName + '/' + dict;
+                        if (!FS.analyzePath(dictPath).exists) {
+                            reject();
+                        }
+                    });
+                    resolve();
+                });
+            });
+        }
+
+        // 注意： array 需要 () 包裹，否则会编译报错
+        var dicts = ([
+            'jieba.dict.utf8',
+            'hmm_model.utf8',
+            'user.dict.utf8',
+            'idf.utf8',
+            'stop_words.utf8',
+        ]);
+        var BaseURL = 'https://raw.githubusercontent.com/yanyiwu/cppjieba/master/dict/';
+        var DB_NAME = '/offline';
+
+
+        checkJiebaDictsReady(dicts, DB_NAME).then(() => {
+            // jieba所需词典已经存在 DB 中，可以直接初始化 jieba
+
+            Module._initJiebaInstance();
+            Module._test();
+
+        }, () => {
+            // 加载jieba所需词典
+            loadJiebaDicts(dicts, BaseURL, DB_NAME).then(function(res) {
+                console.log('All Dicts load and write to DB!!!', res);
+                // 初始化 jieba
+
+                Module._initJiebaInstance();
+                Module._test();
+
+
+            }, function(err) {
+                console.log(err);
+            });
+        });
+    );
 }

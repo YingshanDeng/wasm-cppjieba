@@ -9,5 +9,12 @@ fi
 
 echo "Enter ${DIR} exec cmake .. && make"
 cd build
-cmake ..
-make
+emcmake cmake ..
+emmake make
+em++ ./CMakeFiles/wasm-cppjieba.dir/src/wasm-cppjieba.cpp.o \
+     -o ../dist/index.html \
+     -s FORCE_FILESYSTEM=1 \
+     -lidbfs.js \
+     -s EXPORTED_FUNCTIONS="['_main', '_initJiebaInstance', '_test']" \
+     -s ALLOW_MEMORY_GROWTH=1
+emrun --no_browser --port 8081 dist
