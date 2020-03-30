@@ -8,15 +8,37 @@ EM_JS(void, mountDB, (const char* db), {
 });
 
 // todo 检查日历文件在 DB 中是否存在
-EM_JS(int, checkDicts, (), {
-    // todo ...
-    return true;
+EM_JS(int, checkJiebaDictsReady, (), {
+    var dicts = ([
+        'jieba.dict.utf8',
+        'hmm_model.utf8',
+        'user.dict.utf8',
+        'idf.utf8',
+        'stop_words.utf8',
+    ]);
+    var DB_NAME = '/offline';
+    FS.syncfs(true, function (err) {
+        dicts.
+
+
+
+            // 判断文件是否存在
+            console.log(FS.analyzePath('/working/file4').exists); // false
+            if(FS.analyzePath('/working/file1').exists) {
+                console.log('exist');
+                // 删除文件
+                FS.unlink('/working/file1');
+                FS.syncfs(false, function (err) {
+                });
+            }
+        });
+
+    return ;
 });
 
 int main() {
 
     mountDB("/offline");
-    checkDicts();
 
     EM_ASM(
         function xhrLoadDict(baseURL, dict) {
@@ -78,29 +100,54 @@ int main() {
             }, Promise.resolve());
         }
 
-        function loadJiebaDicts() {
-            // 注意： array 需要 () 包裹，否则会编译报错
-            var dicts = ([
-                'jieba.dict.utf8',
-                'hmm_model.utf8',
-                'user.dict.utf8',
-                'idf.utf8',
-                'stop_words.utf8',
-            ]);
-            var BaseURL = 'https://raw.githubusercontent.com/yanyiwu/cppjieba/master/dict/';
-            var DB_NAME = '/offline';
-
+        function loadJiebaDicts(dicts, baseURL, dbName) {
             var promises = dicts.map(function(dict) {
-                return loadDictAndWriteToDB.bind(null, BaseURL, dict, DB_NAME);
+                return loadDictAndWriteToDB.bind(null, baseURL, dict, dbName);
             });
             return sequencePromise(promises);
         }
 
+        // 注意： array 需要 () 包裹，否则会编译报错
+        var dicts = ([
+            'jieba.dict.utf8',
+            'hmm_model.utf8',
+            'user.dict.utf8',
+            'idf.utf8',
+            'stop_words.utf8',
+        ]);
+        var BaseURL = 'https://raw.githubusercontent.com/yanyiwu/cppjieba/master/dict/';
+        var DB_NAME = '/offline';
+
         // 加载jieba所需词典
-        loadJiebaDicts().then(function(res) {
-            console.log('All Dicts load and write to DB!!!', res);
-        }, function(err) {
-            console.log(err);
+        // loadJiebaDicts(dicts, BaseURL, DB_NAME).then(function(res) {
+        //     console.log('All Dicts load and write to DB!!!', res);
+        // }, function(err) {
+        //     console.log(err);
+        // });
+
+        // 检查jieba所需词典是否已经在DB中
+        function checkJiebaDictsReady(dicts, dbName) {
+            return new Promise(function(resolve, reject) {
+                FS.syncfs(true, function (err) {
+                    if (err) {
+                        reject();
+                    }
+                    dicts.forEach(function(dict) {
+                        var dictPath = dbName + '/' + dict;
+                        if (!FS.analyzePath(dictPath).exists) {
+                            reject();
+                        }
+                    });
+                    resolve();
+                });
+            });
+        }
+
+        checkJiebaDictsReady(dicts, DB_NAME).then(() => {
+            console.log('good');
+        }, () => {
+            console.log('not good');
         });
+
     );
 }
