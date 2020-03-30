@@ -142,22 +142,38 @@ int main() {
         var BaseURL = 'https://raw.githubusercontent.com/yanyiwu/cppjieba/master/dict/';
         var DB_NAME = '/offline';
 
-
+        var t0;
+        var t1;
         checkJiebaDictsReady(dicts, DB_NAME).then(() => {
             // jieba所需词典已经存在 DB 中，可以直接初始化 jieba
-
+            t0 = performance.now();
             Module._initJiebaInstance();
+            t1 = performance.now();
+            console.log('实例化Jieba耗时：', t1-t0, 'ms');
+
+            t0 = performance.now();
             Module._test();
+            t1 = performance.now();
+            console.log('执行一次分词耗时：', t1-t0, 'ms');
 
         }, () => {
+            t0 = performance.now();
             // 加载jieba所需词典
             loadJiebaDicts(dicts, BaseURL, DB_NAME).then(function(res) {
                 console.log('All Dicts load and write to DB!!!', res);
+                t1 = performance.now();
+                console.log('加载词典耗时：', t1-t0, 'ms');
+
                 // 初始化 jieba
-
+                t0 = performance.now();
                 Module._initJiebaInstance();
-                Module._test();
+                t1 = performance.now();
+                console.log('实例化Jieba耗时：', t1-t0, 'ms');
 
+                t0 = performance.now();
+                Module._test();
+                t1 = performance.now();
+                console.log('执行一次分词耗时：', t1-t0, 'ms');
 
             }, function(err) {
                 console.log(err);
