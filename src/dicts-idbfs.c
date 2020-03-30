@@ -7,35 +7,6 @@ EM_JS(void, mountDB, (const char* db), {
     FS.mount(IDBFS, {}, DB_NAME);
 });
 
-// todo 检查日历文件在 DB 中是否存在
-EM_JS(int, checkJiebaDictsReady, (), {
-    var dicts = ([
-        'jieba.dict.utf8',
-        'hmm_model.utf8',
-        'user.dict.utf8',
-        'idf.utf8',
-        'stop_words.utf8',
-    ]);
-    var DB_NAME = '/offline';
-    FS.syncfs(true, function (err) {
-        dicts.
-
-
-
-            // 判断文件是否存在
-            console.log(FS.analyzePath('/working/file4').exists); // false
-            if(FS.analyzePath('/working/file1').exists) {
-                console.log('exist');
-                // 删除文件
-                FS.unlink('/working/file1');
-                FS.syncfs(false, function (err) {
-                });
-            }
-        });
-
-    return ;
-});
-
 int main() {
 
     mountDB("/offline");
