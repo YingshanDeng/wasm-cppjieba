@@ -10,6 +10,8 @@ const char* const IDF_PATH = "offline/idf.utf8";
 const char* const STOP_WORD_PATH = "offline/stop_words.utf8";
 
 extern "C" {
+    extern void my_js();
+
     cppjieba::Jieba* jieba;
 
     void initJiebaInstance() {
@@ -180,4 +182,7 @@ int main() {
             });
         });
     );
+
+    // test
+    my_js();
 }
