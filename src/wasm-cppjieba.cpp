@@ -11,7 +11,7 @@ const char* const STOP_WORD_PATH = "offline/stop_words.utf8";
 
 extern "C" {
     extern void afterInitJiebaCallback(void);
-    extern void afterCutSentenceCallback();
+    extern void afterCutSentenceCallback(uint8_t* data, int dataLength);
     extern void report(const char* type, double time);
 
     cppjieba::Jieba* jieba;
@@ -29,13 +29,40 @@ extern "C" {
         afterInitJiebaCallback();
         report("init-jieba", end-start);
     }
+        // http://www.zedwood.com/article/cpp-utf8-strlen-function
 
+    int utf8Strlen(const string& str) {
+        int c,i,ix,q;
+        for (q=0, i=0, ix=str.length(); i < ix; i++, q++)
+        {
+            c = (unsigned char) str[i];
+            if      (c>=0   && c<=127) i+=0;
+            else if ((c & 0xE0) == 0xC0) i+=1;
+            else if ((c & 0xF0) == 0xE0) i+=2;
+            else if ((c & 0xF8) == 0xF0) i+=3;
+            //else if (($c & 0xFC) == 0xF8) i+=4; // 111110bb //byte 5, unnecessary in 4 byte UTF-8
+            //else if (($c & 0xFE) == 0xFC) i+=5; // 1111110b //byte 6, unnecessary in 4 byte UTF-8
+            else return 0;//invalid utf8
+        }
+        return q;
+    }
     void execJiebaCut(char* s) {
         vector<string> words;
         cout << s << endl;
         cout << "[demo] Cut With HMM" << endl;
         jieba->Cut(s, words, true);
-        cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+
+        vector<string>::iterator it;
+        int length = words.size();
+        int index = 0;
+        uint8_t* resArr = new uint8_t[length];
+        memset(resArr, 0, length);
+        for (it = words.begin(); it != words.end(); it++) {
+            resArr[index++] = utf8Strlen(*it);
+            cout << *it << endl;
+        }
+
+        afterCutSentenceCallback(resArr, length);
     }
 
     void cutSentence(char* s) {
