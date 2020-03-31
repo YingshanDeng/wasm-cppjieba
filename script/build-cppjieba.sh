@@ -11,12 +11,11 @@ echo "Enter ${DIR} exec cmake .. && make"
 cd build
 emcmake cmake ..
 emmake make
-em++ ./CMakeFiles/wasm-cppjieba.dir/src/wasm-cppjieba.cpp.o \
+em++ -O2 ./CMakeFiles/wasm-cppjieba.dir/src/wasm-cppjieba.cpp.o \
      -o ../dist/index.html \
      -s FORCE_FILESYSTEM=1 \
      -lidbfs.js \
      --js-library ../src/wasm-cppjieba-library.js \
-    #  -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall", "cwrap"]' \
      -s EXPORTED_FUNCTIONS="['_main', '_initJiebaInstance', '_cutSentence']" \
      -s ALLOW_MEMORY_GROWTH=1
-emrun --no_browser --port 8081 dist
+emrun --no_browser --port 8081 ../dist

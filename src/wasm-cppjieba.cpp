@@ -46,10 +46,14 @@ extern "C" {
         }
         return q;
     }
-    void execJiebaCut(char* s) {
+
+    void cutSentence(char* s) {
+        double start = emscripten_get_now();
+
         vector<string> words;
-        cout << s << endl;
-        cout << "[demo] Cut With HMM" << endl;
+        // cout << s << endl;
+        // cout << "[demo] Cut With HMM" << endl;
+
         jieba->Cut(s, words, true);
 
         vector<string>::iterator it;
@@ -59,15 +63,11 @@ extern "C" {
         memset(resArr, 0, length);
         for (it = words.begin(); it != words.end(); it++) {
             resArr[index++] = utf8Strlen(*it);
-            cout << *it << endl;
+            // cout << *it << endl;
         }
 
         afterCutSentenceCallback(resArr, length);
-    }
 
-    void cutSentence(char* s) {
-        double start = emscripten_get_now();
-        execJiebaCut(s);
         double end = emscripten_get_now();
         report("cut-sentence", end-start);
     }
