@@ -10,11 +10,14 @@ const char* const IDF_PATH = "offline/idf.utf8";
 const char* const STOP_WORD_PATH = "offline/stop_words.utf8";
 
 extern "C" {
-    extern void my_js();
+    extern void afterInitJiebaCallback(void);
+    extern void afterCutSentenceCallback();
+    extern void report(const char* type, double time);
 
     cppjieba::Jieba* jieba;
 
     void initJiebaInstance() {
+        double start = emscripten_get_now();
         jieba = new cppjieba::Jieba(
             DICT_PATH,
             HMM_PATH,
@@ -22,9 +25,12 @@ extern "C" {
             IDF_PATH,
             STOP_WORD_PATH
         );
+        double end = emscripten_get_now();
+        afterInitJiebaCallback();
+        report("init-jieba", end-start);
     }
 
-    void test() {
+    void cutSentence() {
         vector<string> words;
         // vector<cppjieba::Word> jiebawords;
         string s;
@@ -144,45 +150,27 @@ int main() {
         var BaseURL = 'https://raw.githubusercontent.com/yanyiwu/cppjieba/master/dict/';
         var DB_NAME = '/offline';
 
-        var t0;
-        var t1;
         checkJiebaDictsReady(dicts, DB_NAME).then(() => {
             // jieba所需词典已经存在 DB 中，可以直接初始化 jieba
-            t0 = performance.now();
-            Module._initJiebaInstance();
-            t1 = performance.now();
-            console.log('实例化Jieba耗时：', t1-t0, 'ms');
 
-            t0 = performance.now();
-            Module._test();
-            t1 = performance.now();
-            console.log('执行一次分词耗时：', t1-t0, 'ms');
+            Module._initJiebaInstance();
+            Module._cutSentence();
 
         }, () => {
-            t0 = performance.now();
+
+            var t0 = performance.now();
             // 加载jieba所需词典
             loadJiebaDicts(dicts, BaseURL, DB_NAME).then(function(res) {
                 console.log('All Dicts load and write to DB!!!', res);
-                t1 = performance.now();
+                var t1 = performance.now();
                 console.log('加载词典耗时：', t1-t0, 'ms');
 
-                // 初始化 jieba
-                t0 = performance.now();
                 Module._initJiebaInstance();
-                t1 = performance.now();
-                console.log('实例化Jieba耗时：', t1-t0, 'ms');
-
-                t0 = performance.now();
-                Module._test();
-                t1 = performance.now();
-                console.log('执行一次分词耗时：', t1-t0, 'ms');
+                Module._cutSentence();
 
             }, function(err) {
                 console.log(err);
             });
         });
     );
-
-    // test
-    my_js();
 }
