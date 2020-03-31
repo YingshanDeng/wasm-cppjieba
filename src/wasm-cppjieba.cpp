@@ -30,16 +30,19 @@ extern "C" {
         report("init-jieba", end-start);
     }
 
-    void cutSentence() {
+    void execJiebaCut(char* s) {
         vector<string> words;
-        // vector<cppjieba::Word> jiebawords;
-        string s;
-        // string result;
-        s = "他来到了网易杭研大厦";
         cout << s << endl;
         cout << "[demo] Cut With HMM" << endl;
         jieba->Cut(s, words, true);
         cout << limonp::Join(words.begin(), words.end(), "/") << endl;
+    }
+
+    void cutSentence(char* s) {
+        double start = emscripten_get_now();
+        execJiebaCut(s);
+        double end = emscripten_get_now();
+        report("cut-sentence", end-start);
     }
 }
 
@@ -152,12 +155,8 @@ int main() {
 
         checkJiebaDictsReady(dicts, DB_NAME).then(() => {
             // jieba所需词典已经存在 DB 中，可以直接初始化 jieba
-
             Module._initJiebaInstance();
-            Module._cutSentence();
-
         }, () => {
-
             var t0 = performance.now();
             // 加载jieba所需词典
             loadJiebaDicts(dicts, BaseURL, DB_NAME).then(function(res) {
@@ -165,9 +164,8 @@ int main() {
                 var t1 = performance.now();
                 console.log('加载词典耗时：', t1-t0, 'ms');
 
+                // 初始化 jieba
                 Module._initJiebaInstance();
-                Module._cutSentence();
-
             }, function(err) {
                 console.log(err);
             });
