@@ -10,9 +10,14 @@ const char* const IDF_PATH = "offline/idf.utf8";
 const char* const STOP_WORD_PATH = "offline/stop_words.utf8";
 
 extern "C" {
+    extern void afterCheckJiebaDictsCallback(const char* type);
     extern void afterInitJiebaCallback(void);
     extern void afterCutSentenceCallback(uint8_t* data, int dataLength);
     extern void report(const char* type, double time);
+
+    void checkDict(const char* type) {
+        afterCheckJiebaDictsCallback(type);
+    }
 
     cppjieba::Jieba* jieba;
 
@@ -29,8 +34,8 @@ extern "C" {
         afterInitJiebaCallback();
         report("init-jieba", end-start);
     }
-        // http://www.zedwood.com/article/cpp-utf8-strlen-function
 
+    // http://www.zedwood.com/article/cpp-utf8-strlen-function
     int utf8Strlen(const string& str) {
         int c,i,ix,q;
         for (q=0, i=0, ix=str.length(); i < ix; i++, q++)
@@ -169,6 +174,13 @@ int main() {
             });
         }
 
+        function toUTF8String(str) {
+            var lengthBytes = lengthBytesUTF8(str)+1;
+            var stringOnWasmHeap = Module._malloc(lengthBytes);
+            stringToUTF8(str, stringOnWasmHeap, lengthBytes);
+            return stringOnWasmHeap;
+        }
+
         // 注意： array 需要 () 包裹，否则会编译报错
         var dicts = ([
             'jieba.dict.utf8',
@@ -181,20 +193,15 @@ int main() {
         var DB_NAME = '/offline';
 
         checkJiebaDictsReady(dicts, DB_NAME).then(() => {
-            // jieba所需词典已经存在 DB 中，可以直接初始化 jieba
-            Module._initJiebaInstance();
+            Module._checkDict(toUTF8String('EXIST'));
         }, () => {
             var t0 = performance.now();
             // 加载jieba所需词典
             loadJiebaDicts(dicts, BaseURL, DB_NAME).then(function(res) {
-                console.log('All Dicts load and write to DB!!!', res);
                 var t1 = performance.now();
-                console.log('加载词典耗时：', t1-t0, 'ms');
-
-                // 初始化 jieba
-                Module._initJiebaInstance();
+                Module._checkDict(toUTF8String('DOWNLOAD_SUCCESS: ' + (t1-t0) + 'ms'));
             }, function(err) {
-                console.log(err);
+                Module._checkDict(toUTF8String('DOWNLOAD_FAIL'));
             });
         });
     );
