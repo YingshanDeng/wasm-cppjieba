@@ -6,7 +6,7 @@ fi
 cd build
 emcmake cmake ..
 emmake make
-em++ ./CMakeFiles/wasm-cppjieba.dir/src/wasm-cppjieba.cpp.o \
+em++ -O2 ./CMakeFiles/wasm-cppjieba.dir/src/wasm-cppjieba.cpp.o \
      -o ../dist/index.js \
      -s FORCE_FILESYSTEM=1 \
      -lidbfs.js \
