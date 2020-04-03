@@ -1,0 +1,55 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        var fileName = 'dist/index.js';
+        var worker = new Worker(fileName);
+        worker.onmessage = function(e) {
+            var obj = e.data;
+            switch (obj.cmd) {
+                case 'dicts-check':
+                    console.log('jieba 词典状态: ', obj.data);
+                    // 初始化 jieba
+                    initJieba();
+                    break;
+                case 'jieba-ready':
+                    console.log('jieba 实例化完成！');
+                    break;
+                case 'cut-finish':
+                    console.log('jieba分词结果: ', obj.data);
+                    break;
+                case 'report':
+                    console.log('jieba 执行耗时上报-> ', obj.data.type, ' : ', obj.data.time);
+                    break;
+                case 'warn':
+                    console.log('unknown cmd !!!');
+                    break;
+                default:
+                    console.error('what cmd ???', obj.cmd);
+                    break;
+            }
+        }
+
+        function initJieba() {
+            worker.postMessage({
+                cmd: 'init-jieba',
+            });
+        }
+        function cutSentence(str) {
+            if (!str || !str.length) {
+                return;
+            }
+            worker.postMessage({
+                cmd: 'cut-sentence',
+                sentence: str,
+            });
+        }
+    </script>
+
+</body>
+</html>
