@@ -4,9 +4,148 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
+
+    <style>
+        #container {
+            position: absolute;
+            left: 10%;
+            top: 5%;
+            width: 80%;
+            height: 500px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px 0 rgba(0,0,0,0.37);
+            overflow: hidden;
+        }
+        #header {
+            display: flex;
+            height: 50px;
+            border-bottom: 1px solid rgba(0,0,0,0.12);
+        }
+        #header .left-label,
+        #header .right-label {
+            width: 50%;
+            color: rgba(0,0,0,0.54);
+            font-size: 14px;
+            font-weight: 500;
+            height: 50px;
+            line-height: 50px;
+            margin-left: 0;
+            padding: 0 24px;
+        }
+        #time {
+            position: absolute;
+            right: 24px;
+        }
+        #content {
+            display: flex;
+        }
+        #content .left-content {
+            position: relative;
+            width: 50%;
+            height: 450px;
+            border-right: 1px solid rgba(0,0,0,0.12);
+        }
+        #content .right-content {
+            width: calc(50% - 40px);
+            height: 410px;
+            padding: 20px;
+            overflow-x: hidden;
+            overflow-y: scroll;
+        }
+        #source {
+            width: 100%;
+            height: 100%;
+            outline: none;
+            border: none;
+            resize: none;
+            font-family: 'Roboto',arial,sans-serif;
+            font-size: 20px;
+            padding: 20px;
+            padding-right: 50px;
+        }
+        #result {
+            font-family: 'Roboto',arial,sans-serif;
+            font-size: 20px;
+        }
+        #clear {
+            position: absolute;
+            top: 20px;
+            right: 15px;
+            width: 24px;
+            height: 24px;
+            background-size: 24px;
+            background-image: url('data:image/svg+xml;utf8,<svg t="1585920416535" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2956" width="200" height="200"><path d="M507.168 473.232L716.48 263.936a16 16 0 0 1 22.624 0l11.312 11.312a16 16 0 0 1 0 22.624L541.12 507.168 750.4 716.48a16 16 0 0 1 0 22.624l-11.312 11.312a16 16 0 0 1-22.624 0L507.168 541.12 297.872 750.4a16 16 0 0 1-22.624 0l-11.312-11.312a16 16 0 0 1 0-22.624l209.296-209.312-209.296-209.296a16 16 0 0 1 0-22.624l11.312-11.312a16 16 0 0 1 22.624 0l209.296 209.296z" p-id="2957"></path></svg>');
+            opacity: 0.4;
+            border-radius: 12px;
+        }
+        #clear:hover {
+            background-color: rgba(0,0,0,0.14);
+        }
+        #clear:active {
+            background-color: rgba(0,0,0,0.20);
+        }
+    </style>
 </head>
 <body>
+
+    <div id="container">
+        <div id="header">
+            <div class="left-label">分词内容:</div>
+            <div class="right-label">
+                分词结果:
+                <span id="time"></span>
+            </div>
+        </div>
+        <div id="content">
+            <div class="left-content">
+                <div id="clear"></div>
+                <textarea id="source" readonly spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off">jieba 初始化中...</textarea>
+            </div>
+            <div class="right-content">
+                <div id="result"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        var textarea = document.getElementById('source');
+        var resuleEle = document.getElementById('result');
+        var clearBtn = document.getElementById('clear');
+        var timeLabel = document.getElementById('time');
+
+        var handler = null;
+        var currentStr = '';
+        textarea.addEventListener('input', (e) => {
+            if (textarea.value.length === 0) {
+                resuleEle.innerText = '';
+                timeLabel.innerText = '';
+            }
+            if (handler) clearTimeout(handler);
+            handler = setTimeout(() => {
+                if (currentStr.length === 0) {
+                    currentStr = textarea.value;
+                    cutSentence(currentStr);
+                }
+            }, 300);
+        });
+
+        clearBtn.addEventListener('click', (e) => {
+            textarea.value = '';
+            resuleEle.innerText = '';
+            timeLabel.innerText = '';
+        });
+        function toResultStr(str, cuts) {
+            let res = ''
+            let start = 0;
+            for(var i = 0; i < cuts.length; i ++) {
+                res += str.slice(start, start+cuts[i]);
+                res += '/';
+                start += cuts[i];
+            }
+            return res;
+        }
+
+
         var fileName = 'dist/index.js';
         var worker = new Worker(fileName);
         worker.onmessage = function(e) {
@@ -14,17 +153,26 @@
             switch (obj.cmd) {
                 case 'dicts-check':
                     console.log('jieba 词典状态: ', obj.data);
-                    // 初始化 jieba
+
+                    timeLabel.innerText = 'jieba 词典状态: ' + obj.data;
                     initJieba();
                     break;
                 case 'jieba-ready':
                     console.log('jieba 实例化完成！');
+
+                    textarea.value = '';
+                    textarea.removeAttribute('readonly');
                     break;
                 case 'cut-finish':
                     console.log('jieba分词结果: ', obj.data);
+
+                    resuleEle.innerText = toResultStr(currentStr, obj.data);
+                    currentStr = '';
                     break;
                 case 'report':
                     console.log('jieba 执行耗时上报-> ', obj.data.type, ' : ', obj.data.time);
+
+                    timeLabel.innerText = '耗时->' + obj.data.type + ': ' + obj.data.time;
                     break;
                 case 'warn':
                     console.log('unknown cmd !!!');
@@ -34,7 +182,6 @@
                     break;
             }
         }
-
         function initJieba() {
             worker.postMessage({
                 cmd: 'init-jieba',

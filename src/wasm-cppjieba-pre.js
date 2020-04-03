@@ -1,7 +1,8 @@
 // web worker
-Module['onRuntimeInitialized'] = function() {
-    console.log('onRuntimeInitialized');
-};
+
+// Module['onRuntimeInitialized'] = function() {
+//     console.log('onRuntimeInitialized');
+// };
 
 /**
  * worker 接收两种指令：
