@@ -3,8 +3,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
-
+    <title>wasm-cppjieba demo!</title>
+    <script src="./helper.js"></script>
     <style>
         #container {
             position: absolute;
@@ -114,18 +114,16 @@
         var timeLabel = document.getElementById('time');
 
         var handler = null;
-        var currentStr = '';
         textarea.addEventListener('input', (e) => {
             if (textarea.value.length === 0) {
                 resuleEle.innerText = '';
                 timeLabel.innerText = '';
             }
             if (handler) clearTimeout(handler);
-            handler = setTimeout(() => {
-                if (currentStr.length === 0) {
-                    currentStr = textarea.value;
-                    cutSentence(currentStr);
-                }
+            handler = setTimeout(async () => {
+                let currentStr = textarea.value;
+                let res = await cutSentencePromise(currentStr);
+                resuleEle.innerText = toResultStr(currentStr, res);
             }, 300);
         });
 
@@ -145,57 +143,20 @@
             return res;
         }
 
+        var fileName = '../dist/index.js';
+        createJieba(fileName, (dictsStatus) => {
+            console.log('jieba 词典状态: ', dictsStatus);
 
-        var fileName = 'dist/index.js';
-        var worker = new Worker(fileName);
-        worker.onmessage = function(e) {
-            var obj = e.data;
-            switch (obj.cmd) {
-                case 'dicts-check':
-                    console.log('jieba 词典状态: ', obj.data);
-
-                    timeLabel.innerText = 'jieba 词典状态: ' + obj.data;
-                    initJieba();
-                    break;
-                case 'jieba-ready':
-                    console.log('jieba 实例化完成！');
-
-                    textarea.value = '';
-                    textarea.removeAttribute('readonly');
-                    break;
-                case 'cut-finish':
-                    console.log('jieba分词结果: ', obj.data);
-
-                    resuleEle.innerText = toResultStr(currentStr, obj.data);
-                    currentStr = '';
-                    break;
-                case 'report':
-                    console.log('jieba 执行耗时上报-> ', obj.data.type, ' : ', obj.data.time);
-
-                    timeLabel.innerText = '耗时->' + obj.data.type + ': ' + obj.data.time;
-                    break;
-                case 'warn':
-                    console.log('unknown cmd !!!');
-                    break;
-                default:
-                    console.error('what cmd ???', obj.cmd);
-                    break;
-            }
-        }
-        function initJieba() {
-            worker.postMessage({
-                cmd: 'init-jieba',
+            initJieba(() => {
+                console.log('jieba 实例化完成！');
+                // 让输入框可用
+                textarea.value = '';
+                textarea.removeAttribute('readonly');
             });
-        }
-        function cutSentence(str) {
-            if (!str || !str.length) {
-                return;
-            }
-            worker.postMessage({
-                cmd: 'cut-sentence',
-                sentence: str,
-            });
-        }
+
+        }, (reportMessage) => {
+            timeLabel.innerText = reportMessage;
+        });
     </script>
 
 </body>

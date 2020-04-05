@@ -5,7 +5,8 @@
 // };
 
 /**
- * worker 接收两种指令：
+ * worker
+ * 接收两种指令：
  *  1. 'init-jieba'
  *  2. 'cut-sentence'
  * 发送五种指令：
