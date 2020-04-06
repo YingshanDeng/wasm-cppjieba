@@ -1,7 +1,7 @@
 # wasm-cppjieba
-Build cppjieba to webassembly and work on browser ✂️
+Build cppjieba to webassembly and run on web worker ✂️
 
-![demo](https://raw.githubusercontent.com/YingshanDeng/wasm-cppjieba/master/demo/example.png?token=ABXJGA2VUU6YOQ7FU3RERTK6RMPDI)
+![demo](https://raw.githubusercontent.com/YingshanDeng/wasm-cppjieba/master/demo/example.png)
 
 ## Dependencies
 Download and install emscripten [Guide](https://emscripten.org/docs/getting_started/downloads.html)
