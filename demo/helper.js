@@ -23,7 +23,7 @@ function createJieba(workerFilePath, dictStatusCb, reportCb) {
                 cutTask && cutTask(obj.data);
                 break;
             case 'report':
-                reportTask && reportTask(obj.data.type + ': ' + obj.data.time);
+                reportTask && reportTask(obj.data.type + ': ' + obj.data.time.toFixed(4));
                 break;
             case 'warn':
                 console.log('unknown cmd !!!');
